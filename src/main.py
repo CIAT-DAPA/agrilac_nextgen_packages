@@ -41,5 +41,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
+#Ejemplo de comando
 #python main.py -i "D:\Code\next_gen\packages\agrilac_nextgen_packages\config" -o "D:\Code\next_gen\packages\agrilac_nextgen_packages"
