@@ -501,7 +501,7 @@ def create_ensemble(params, paths, precip_monthly):
         return None
     
     return Ensamble
-def run_script(params):
+def run_script(params, output_path):
     """
     Función principal que coordina la descarga y el análisis de datos.
     """
