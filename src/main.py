@@ -2,7 +2,7 @@ import os
 import argparse
 
 from forecast import run_script
-from utils import csv_to_dict, process_params
+from utils import csv_to_dict, process_params,train_step_one,train_step_two,test_step_one,test_step_two
 
 def main():
 
@@ -31,9 +31,6 @@ def main():
     params_dict = csv_to_dict(csv_path)
 
     params = process_params(params_dict)
-
-    print("Iniciando el proceso")
-    
     run_script(params, output_path)
 
  
@@ -41,5 +38,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
+#Ejemplo de comando
 #python main.py -i "D:\Code\next_gen\packages\agrilac_nextgen_packages\config" -o "D:\Code\next_gen\packages\agrilac_nextgen_packages"
