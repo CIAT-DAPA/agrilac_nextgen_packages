@@ -2,7 +2,7 @@ import os
 import argparse
 
 from forecast import run_script
-from utils import csv_to_dict, process_params,train_step_one,train_step_two,test_step_one,test_step_two
+from utils import  process_dataframe,create_monthly_folders
 
 def main():
 
@@ -22,17 +22,17 @@ def main():
     input_path = args.inputs
     output_path = args.outputs
 
-    csv_path = os.path.join(input_path, "config.csv")
+    xlsx_path = os.path.join(input_path, "config.xlsx")
 
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"El archivo {csv_path} no existe.")
+    if not os.path.exists(xlsx_path):
+        raise FileNotFoundError(f"El archivo {xlsx_path} no existe.")
 
 
-    params_dict = csv_to_dict(csv_path)
 
-    params = process_params(params_dict)
-    run_script(params, output_path)
-
+    params_one,params_two = process_dataframe(xlsx_path)
+    created_folders = create_monthly_folders(output_path)
+    run_script(params_one, created_folders[0])
+    run_script(params_two, created_folders[1])
  
 
 
