@@ -3,6 +3,7 @@ import os
 import time
 import itertools
 import datetime
+from datetime import timedelta
 import math
 # Procesamiento de datos y análisis numérico
 import numpy as np
@@ -11,6 +12,8 @@ import pandas as pd
 import xarray as xr
 import rioxarray as rxr
 import xcast as xc
+import rasterio
+from rasterio.transform import from_origin
 # Manejo de datos geoespaciales
 import geopandas as gpd
 from netCDF4 import Dataset
@@ -23,7 +26,41 @@ from scipy.linalg import svd
 from tqdm import tqdm
 # Solicitudes para acceso web
 import requests
-from utils import train_step_one,train_step_two,test_step_one,test_step_two
+from utils import train_step_one,train_step_two
+def pearson_to_kendall(r):
+    return (2 / np.pi) * np.arcsin(r)
+def kendall_tau(a, b):
+    """
+    Calcula el coeficiente de correlación de Kendall Tau entre dos arrays.
+
+    Parámetros:
+    - a (array-like): Primer conjunto de datos.
+    - b (array-like): Segundo conjunto de datos.
+
+    Retorna:
+    - float: El coeficiente de correlación de Kendall Tau.
+    
+    Lanza:
+    - ValueError: Si las entradas no tienen la misma longitud.
+    - Exception: Si ocurre un error inesperado durante el cálculo.
+    """
+    
+    try:
+        # Verificar si las entradas tienen la misma longitud
+        if len(a) != len(b):
+            raise ValueError("Los arrays de entrada deben tener la misma longitud.")
+        
+        # Calcular el coeficiente de correlación de Kendall Tau
+        tau, _ = kendalltau(a, b)
+        
+        return tau
+    
+    except ValueError as ve:
+        print(f"Error en los datos de entrada: {ve}")
+        return None
+    except Exception as e:
+        print(f"Ocurrió un error inesperado: {e}")
+        return None
 def get_gcm_url(start_time, start_year, last_year, start_step, last_step, lat_1, lat_2, lon_1, lon_2, model):
     """
     Esta función genera una URL para descargar datos de precipitación de diferentes modelos GCM.
@@ -71,12 +108,12 @@ def get_gcm_url(start_time, start_year, last_year, start_step, last_step, lat_1,
 
     # Retornar la URL correspondiente al modelo especificado
     return dic[model]
-def download_nc_file(url, path, timeout=300):
+def download_nc_file(url, path,username,password, timeout=300):
     """
     Descarga un archivo NetCDF desde una URL y lo guarda en la ruta especificada.
     """
-    username = 'diegoagudelo30@gmail.com'
-    password = 'diego2020'
+    username = username
+    password = password
     login_url = 'https://iridl.ldeo.columbia.edu/auth/login/local/submit/login'
 
     try:
@@ -197,28 +234,28 @@ def download_data_gcm(params):
     lat_2 = convert_lat_lon(params['lat_max'])
     lon_1 = convert_lat_lon(params['lon_min'])
     lon_2 = convert_lat_lon(params['lon_max'])
-    models = params['models']
+    models = params['modelos']
     start_year = 1982
     now = datetime.datetime.now()
     end_year = now.year - 1
 
-    start_time = now.strftime('%b') 
+    start_time = (now - timedelta(days=30)).strftime("%b")
     if isinstance(models, str):
         models = [models]
 
     try:
-        urls = list(map(lambda model: get_gcm_url(start_time, start_year, end_year, params['start_step_train'], params['last_step_train'], lat_1, lat_2, lon_1, lon_2, model), models))
+        urls = list(map(lambda model: get_gcm_url(start_time, start_year, end_year, params['start_step'], params['last_step'], lat_1, lat_2, lon_1, lon_2, model), models))
         print("URLs generadas correctamente:")
         for url in urls:
             print(url)
     except ValueError as e:
         return f"Error al generar URLs: {e}"
 
-    generate_path = lambda model: f"{descarga_path}/{model}_{start_time}_{params['start_step_train']}-{params['last_step_train']}.nc"
+    generate_path = lambda model: f"{descarga_path}/{model}_{start_time}_{params['start_step']}-{params['last_step']}.nc"
     paths = list(map(generate_path, models))
 
     try:
-        list(map(download_nc_file, urls, paths))
+        list(map(download_nc_file, urls, paths,params['username'],params['password']))
         print("Archivos descargados correctamente en las siguientes rutas:")
         for path in paths:
             print(path)
@@ -231,7 +268,6 @@ def download_data_gcm(params):
             print(f"El archivo no se encontró: {path}")
         else:
             print(f"Archivo encontrado: {path}, tamaño: {os.path.getsize(path)} bytes")
-
     return paths
 def calculate_winter_precip(path, months, start_year, end_year):
     """
@@ -309,8 +345,34 @@ def create_values(limit_A, limit_B, limit_C):
     B = list(range(1, limit_B + 1))
     C = list(range(1, limit_C + 1))
     return A, B, C
-def pearson_to_kendall(r):
-    return (2 / np.pi) * np.arcsin(r)
+def save_raster(data_array, output_path):
+    if isinstance(data_array, xr.Dataset):
+        # Asumiendo que necesitas un DataArray específico dentro del Dataset
+        data_array = data_array.to_array().isel(variable=0)  # Modifica según sea necesario para obtener el DataArray correcto
+
+    lon = data_array.coords['x']
+    lat = data_array.coords['y']
+
+    # Voltear el array de datos a lo largo del eje de latitud
+    flipped_data = np.flip(data_array.values, axis=0)
+    
+    transform = from_origin(west=lon.min().item(), north=lat.max().item(), xsize=(lon.max().item()-lon.min().item())/len(lon), ysize=(lat.max().item()-lat.min().item())/len(lat))
+
+    # Guardar como un archivo raster
+    with rasterio.open(
+        output_path,
+        'w',
+        driver='GTiff',
+        height=flipped_data.shape[0],
+        width=flipped_data.shape[1],
+        count=1,
+        dtype=flipped_data.dtype,
+        crs='+proj=latlong',
+        transform=transform,
+    ) as dst:
+        dst.write(flipped_data, 1)
+
+    print(f"Archivo raster guardado en {output_path}")
 def download_forecast_gcm(params):
     """
     Descarga datos de GCM para el año de pronóstico.
@@ -324,32 +386,16 @@ def download_forecast_gcm(params):
     lat_2 = convert_lat_lon(params['lat_max'])
     lon_1 = convert_lat_lon(params['lon_min'])
     lon_2 = convert_lat_lon(params['lon_max'])
-    models = params['models']
-    
+    models = params['modelos']
+    if isinstance(models, str):
+        models = [models] 
     now = datetime.datetime.now()
     forecast_year= now.year
-    def get_start_time():
-        """
-        Obtiene el mes actual si el día es mayor o igual a 15, de lo contrario, obtiene el mes anterior.
-
-        Retorna:
-        - str: Mes en formato abreviado (Jan, Feb, ...)
-        """
-        now = datetime.datetime.now()
-        if now.day >= 15:
-            start_time = now.strftime('%b')
-        else:
-            previous_month = now - datetime.timedelta(days=30)
-            start_time = previous_month.strftime('%b')
-    
-        return start_time
-
-    start_time = get_start_time()
-
-    urls = [get_gcm_url(start_time, forecast_year-10, forecast_year, params['start_step_test'], params['last_step_test'], lat_1, lat_2, lon_1, lon_2, model) for model in models]
+    start_time=  (now - timedelta(days=30)).strftime("%b")
+    urls = [get_gcm_url(start_time, forecast_year, forecast_year, params['start_step'], params['last_step'], lat_1, lat_2, lon_1, lon_2, model) for model in models]
     
     paths = [os.path.join(data_forecast, f"{model}_{forecast_year}.nc") for model in models]
-    list(map(download_nc_file, urls, paths))
+    list(map(download_nc_file, urls, paths,params['username'],params['password']))
 
     return paths
 def run_forecast(params, paths, obs_f):
@@ -358,13 +404,14 @@ def run_forecast(params, paths, obs_f):
     fore_path = os.path.join(base_path, 'forecast')
     files_path = os.path.join(fore_path, 'files')
     img_path = os.path.join(fore_path, 'img')
-
+    tif_path=os.path.join(fore_path, 'raster')
     os.makedirs(files_path, exist_ok=True)
     os.makedirs(img_path, exist_ok=True)
+    os.makedirs(tif_path, exist_ok=True)
     now = datetime.datetime.now()
-    start_time=now.month
-    start_step = params['start_step_train']
-    last_step = params['last_step_train']
+    start_time=now.month-1
+    start_step = params['start_step']
+    last_step = params['last_step']
     start_month = int(start_time + start_step - 0.5)
     end_month = int(start_time + last_step - 0.5)
     if start_month > 12:
@@ -413,7 +460,7 @@ def run_forecast(params, paths, obs_f):
     gcm = []
     for file_path in paths:
         try:
-            ds = xr.open_dataset(file_path, decode_times=False).aprod
+            ds = xr.open_dataset(file_path, decode_times=False, engine='netcdf4').aprod
             ds = ds.rename({'L': 'M'})
             units = ds['S'].attrs['units']
             calendar = ds['S'].attrs['calendar']
@@ -436,14 +483,14 @@ def run_forecast(params, paths, obs_f):
     Model_hindcast = Model_hindcast.mean(dim='M')
     fore = Model_hindcast.isel(S=-1, drop=False)
 
-    eof_x = params['eof_x']
-    eof_y = params['eof_y']
-    cca_modos = params['cca_modos']
+    eof_x = params['modos_x']
+    eof_y = params['modos_y']
+    cca_modos = params['modos_cca']
     A, B, C = create_values(eof_x, eof_y, cca_modos)
     combinaciones = itertools.product(A, B, C)
     combinaciones_filtradas = [(a, b, c) for a, b, c in combinaciones if c <= min(a, b)]
     resultados = []
-    step_difference = params['last_step_train'] - params['start_step_train'] + 1
+    step_difference = params['last_step'] - params['start_step'] + 1
     window = 3 if step_difference == 3 else 2
     S_value = 1 if step_difference == 3 else 0
     for combinacion in combinaciones_filtradas:
@@ -457,17 +504,18 @@ def run_forecast(params, paths, obs_f):
             preds_list.append(preds.isel(S=S_value))
             ytest_list.append(ytest.isel(S=S_value))
 
-        hindcasts_det = xr.concat(preds_list, 'S')
-        ytest_concat = xr.concat(ytest_list, 'S')
-        pearson = xc.Pearson(hindcasts_det, ytest_concat)
+            hindcasts_det = xr.concat(preds_list, 'S').chunk(dict(S=-1))
+            ytest_concat = xr.concat(ytest_list, 'S').chunk(dict(S=-1))
         kendall_dataarray = xr.apply_ufunc(
-            pearson_to_kendall,
-            pearson,
+            kendall_tau,
+            hindcasts_det,
+            ytest_concat,
+            input_core_dims=[['S'], ['S']],
             vectorize=True,
-            dask="parallelized",
+            dask='parallelized',
             output_dtypes=[float]
-        )
-        tau_kendall = kendall_dataarray.mean().item()
+            )
+        tau_kendall = kendall_dataarray.mean().compute().item()
         resultados.append({'Combinacion': combinacion, 'Goodness Index': tau_kendall})
 
     resultados_df = pd.DataFrame(resultados).round(2)
@@ -485,7 +533,7 @@ def run_forecast(params, paths, obs_f):
     }
 
     hindcasts_det, hindcasts_prob = [], []
-    step_difference = params['last_step_train'] - params['start_step_train'] + 1
+    step_difference = params['last_step'] - params['start_step'] + 1
     window = 3 if step_difference == 3 else 2
     S_value = 1 if step_difference == 3 else 0
     for xtrain, ytrain, xtest, ytest in xc.CrossValidator(model1_f, obs_f, window=window):
@@ -546,7 +594,10 @@ def run_forecast(params, paths, obs_f):
     forecasts_prob80_smooth = xc.gaussian_smooth(forecsts_probs80, kernel=9)
     forecasts_prob20_smooth.to_netcdf(os.path.join(files_path, 'forecasts_prob_20.nc'))
     forecasts_prob80_smooth.to_netcdf(os.path.join(files_path, 'forecasts_prob_80.nc'))
-
+    groc=xc.GROCS(hindcasts_prob, T)
+    plt.figure()
+    pl=xc.view(groc,drymask=drymask,title='GROCS',cmap=plt.get_cmap('RdBu',8),vmin=0,vmax=1)
+    plt.savefig(os.path.join(img_path, 'GROCS.png'))
     print(resultados_df)
     plt.figure()
     xc.view_probabilistic(forecasts_prob_smooth.isel(S=0), title='Probabilisitc forecast', drymask=drymask)
@@ -554,17 +605,46 @@ def run_forecast(params, paths, obs_f):
     # Imprimir datos observados del último año
     last_obs = obs_f.isel(S=-1)
     print("Data Observada ultimo ano:")
-    print(last_obs)
+    print(last_obs['S'])
+    BN=forecasts_prob_smooth.sel(M='BN').isel(S=-1)
+    NN=forecasts_prob_smooth.sel(M='NN').isel(S=-1)
+    AN=forecasts_prob_smooth.sel(M='AN').isel(S=-1)
+    max_indices = forecasts_prob_smooth.isel(S=-1).fillna(-np.inf).argmax(dim='M')
 
+    # Copia los datos originales para modificarlos
+    result = forecasts_prob_smooth.isel(S=-1).copy()
+
+    # Modifica los valores según la posición del índice
+    result = xr.where(max_indices == 0, result, result + 0)  # Si es BN, lo dejas igual
+    result = xr.where(max_indices == 1, result + 1, result)  # Si es NN, sumas 1
+    result = xr.where(max_indices == 2, result + 2, result)  # Si es AN, sumas 2
+    result=result.isel(M=0)
+    # Leer el shapefile del mundo
+    world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+
+    # Filtrar el shapefile para obtener solo Honduras
+    honduras = world[world.name == 'Honduras']
+    AN = AN.rename({'X': 'x', 'Y': 'y'})
+    BN = BN.rename({'X': 'x', 'Y': 'y'})
+    NN = NN.rename({'X': 'x', 'Y': 'y'})
+    result = result.rename({'X': 'x', 'Y': 'y'})
+    AN=AN.rio.write_crs("EPSG:4326").rio.clip(honduras.geometry, honduras.crs)
+    BN=BN.rio.write_crs("EPSG:4326").rio.clip(honduras.geometry, honduras.crs)
+    NN=NN.rio.write_crs("EPSG:4326").rio.clip(honduras.geometry, honduras.crs)
+    result=result.rio.write_crs("EPSG:4326").rio.clip(honduras.geometry, honduras.crs)
+    save_raster(AN,os.path.join(tif_path, 'above.tif'))
+    save_raster(BN,os.path.join(tif_path, 'below.tif'))
+    save_raster(NN,os.path.join(tif_path, 'normal.tif'))
+    save_raster(result,os.path.join(tif_path, 'dominant.tif'))
     # Imprimir datos del modelo del último año
     last_model1_f = model1_f.isel(S=-1)
     print("Datos del modelo 1 ultimo ano:")
-    print(last_model1_f)
+    print(last_model1_f['S'])
 
     # Imprimir datos del pronóstico del último año
     last_forecast = fore.isel(S=-1)
     print("Datos del pronóstico ultimo ano:")
-    print(last_forecast)
+    print(last_forecast['S'])
 def create_ensemble(params, paths, precip_monthly):
     """
     Crea el ensamble a partir de los datos GCM descargados.
@@ -572,13 +652,13 @@ def create_ensemble(params, paths, precip_monthly):
     gcm = []
     for file_path in paths:
         try:
-            ds = xr.open_dataset(file_path, decode_times=False).aprod
+            ds = xr.open_dataset(file_path, decode_times=False, engine='netcdf4').aprod
             ds = ds.rename({'L': 'M'})
             units = ds['S'].attrs['units']
             calendar = ds['S'].attrs['calendar']
             origin = pd.Timestamp(units.split('since')[-1].strip())
             dates = [origin + pd.DateOffset(months=month) for month in ds["S"].values]
-            date_plus = [date + pd.DateOffset(months=math.floor(params['last_step_train'])) for date in dates]
+            date_plus = [date + pd.DateOffset(months=math.floor(params['last_step'])) for date in dates]
             years = [date.year for date in date_plus]
             ds_last = ds.assign_coords({'S': years}).copy()
             ds_regrid = xc.regrid(ds_last, precip_monthly.X, precip_monthly.Y)
@@ -587,8 +667,8 @@ def create_ensemble(params, paths, precip_monthly):
             print(f"Error al procesar archivo {file_path}: {e}")
 
     try:
-        Model_hindcast = xr.concat(gcm, 'M').assign_coords({'M': params['models']})
-        Ensamble = Model_hindcast.sel(M=params['models']).mean(dim='M').rename('prec')
+        Model_hindcast = xr.concat(gcm, 'M')
+        Ensamble = Model_hindcast.mean(dim='M').rename('prec')
         Ensamble.to_netcdf(os.path.join(params['save_path'], 'ensamble', 'ensamble.nc'))
         print('Creación de ensamble')
     except Exception as e:
@@ -600,17 +680,13 @@ def run_script(params, output_path):
     base_path = params.get('save_path', output_path)
     params['save_path'] = base_path
     
-    if params['Trimestre'] == 'Primer_trimestre':
-        train_last_step, train_start_step = train_step_one()
-        test_last_step, test_start_step = test_step_one()
-    else:  # Asumimos que es 'Segundo_trimestre'
-        train_last_step, train_start_step = train_step_two()
-        test_last_step, test_start_step = test_step_two()
+    if params['LT'] == 0:
+        last_step, start_step = train_step_one()
+    elif params['LT'] == 3: 
+        last_step, start_step = train_step_two()
     
-    params['start_step_train'] = train_start_step
-    params['last_step_train'] = train_last_step
-    params['start_step_test'] = test_start_step
-    params['last_step_test'] = test_last_step
+    params['start_step'] = start_step
+    params['last_step'] = last_step
     print(params)
     print('Iniciando descarga de CHIRPS')
     download_data_chirps(params)
@@ -622,9 +698,9 @@ def run_script(params, output_path):
         return paths
 
     now = datetime.datetime.now()
-    start_time = now.month
-    start_month = int(start_time + params['start_step_train'] - 0.5)
-    end_month = int(start_time + params['last_step_train'] - 0.5)
+    start_time = now.month-1
+    start_month = int(start_time + params['start_step'] - 0.5)
+    end_month = int(start_time + params['last_step'] - 0.5)
 
     if start_month > 12:
         start_month -= 12
@@ -632,7 +708,6 @@ def run_script(params, output_path):
         end_month -= 12
 
     months = [start_month, end_month]
-    now = datetime.datetime.now()
     end_year = now.year - 1
     start_year = 1982
     precip_monthly = calculate_winter_precip(os.path.join(params['save_path'], 'chirps', 'chirps_daily.nc'), months, start_year, end_year)
