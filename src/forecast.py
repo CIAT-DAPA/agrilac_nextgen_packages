@@ -112,8 +112,8 @@ def download_nc_file(url, path,username,password, timeout=300):
     """
     Descarga un archivo NetCDF desde una URL y lo guarda en la ruta especificada.
     """
-    username = username
-    password = password
+    username = str(username)
+    password = str(password)
     login_url = 'https://iridl.ldeo.columbia.edu/auth/login/local/submit/login'
 
     try:
@@ -255,7 +255,7 @@ def download_data_gcm(params):
     paths = list(map(generate_path, models))
 
     try:
-        list(map(download_nc_file, urls, paths,params['username'],params['password']))
+        list(map(lambda url, path: download_nc_file(url, path, params['username'], params['password']), urls, paths))
         print("Archivos descargados correctamente en las siguientes rutas:")
         for path in paths:
             print(path)
@@ -395,7 +395,7 @@ def download_forecast_gcm(params):
     urls = [get_gcm_url(start_time, forecast_year, forecast_year, params['start_step'], params['last_step'], lat_1, lat_2, lon_1, lon_2, model) for model in models]
     
     paths = [os.path.join(data_forecast, f"{model}_{forecast_year}.nc") for model in models]
-    list(map(download_nc_file, urls, paths,params['username'],params['password']))
+    list(map(lambda url, path: download_nc_file(url, path, params['username'], params['password']), urls, paths))
 
     return paths
 def run_forecast(params, paths, obs_f):
