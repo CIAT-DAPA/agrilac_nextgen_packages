@@ -1,6 +1,9 @@
 import os
 import argparse
-
+import calendar
+import datetime
+import time
+from datetime import timedelta
 from forecast import run_script
 from utils import  process_dataframe,create_monthly_folders
 
@@ -30,6 +33,8 @@ def main():
 
 
     params_one,params_two = process_dataframe(xlsx_path)
+    os.makedirs(os.path.join(output_path, str(datetime.datetime.now().year)), exist_ok=True)
+    output_path=os.path.join(output_path, str(datetime.datetime.now().year))
     created_folders = create_monthly_folders(output_path)
     run_script(params_one, created_folders[0])
     run_script(params_two, created_folders[1])
