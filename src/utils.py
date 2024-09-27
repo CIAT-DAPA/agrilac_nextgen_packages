@@ -96,41 +96,43 @@ def process_dataframe(path):
 
     return first_dict, second_dict
 def create_monthly_folders(base_path):
+    # Diccionario de sufijos por cada mes del año
     month_suffixes = {
-        'Enero': ['EFM', 'AMJ'],
-        'Febrero': ['FMA', 'MJJ'],
-        'Marzo': ['MAM', 'JJA'],
-        'Abril': ['AMJ', 'JAS'],
-        'Mayo': ['MJJ', 'ASO'],
-        'Junio': ['JJA', 'SON'],
-        'Julio': ['JAS', 'OND'],
-        'Agosto': ['ASO', 'NDE'],
-        'Septiembre': ['SON', 'DEF'],
-        'Octubre': ['OND', 'EFM'],
-        'Noviembre': ['NDE', 'FMA'],
-        'Diciembre': ['DEF', 'MAM']
+        'Enero': ['FMA', 'MJJ'],
+        'Febrero': ['MAM', 'JJA'],
+        'Marzo': ['AMJ', 'JAS'],
+        'Abril': ['MJJ', 'ASO'],
+        'Mayo': ['JJA', 'SON'],
+        'Junio': ['JAS', 'OND'],
+        'Julio': ['ASO', 'NDE'],
+        'Agosto': ['SON', 'DEF'],
+        'Septiembre': ['OND', 'EFM'],
+        'Octubre': ['NDE', 'FMA'],
+        'Noviembre': ['DEF', 'MAM'],
+        'Diciembre': ['EFM', 'AMJ']
     }
+
+    # Nombres de los meses en español
     month_names = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ]
     
+    # Obtener el mes actual
     now = datetime.datetime.now()
     current_month = month_names[now.month - 1]
-    previous_month_index = (now.month - 2) % 12
-    previous_month = month_names[previous_month_index]
 
-
+    # Crear la carpeta del mes actual
     current_month_folder = os.path.join(base_path, current_month)
     os.makedirs(current_month_folder, exist_ok=True)
 
+    # Obtener los sufijos para el mes actual
     suffixes = month_suffixes[current_month]
 
-
-    folder_names = [f"{previous_month[:3]}_{suffix}" for suffix in suffixes]
-
+    # Crear las carpetas con los sufijos correspondientes
     created_paths = []
-    for folder_name in folder_names:
+    for suffix in suffixes:
+        folder_name = f"{current_month[:3]}_{suffix}"
         folder_path = os.path.join(current_month_folder, folder_name)
         os.makedirs(folder_path, exist_ok=True)
         created_paths.append(folder_path)
