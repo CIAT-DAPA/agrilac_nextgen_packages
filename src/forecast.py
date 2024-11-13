@@ -217,7 +217,8 @@ def get_gcm_url(start_time, start_year, last_year, start_step, last_step, lat_1,
         'Can-2': "https://iridl.ldeo.columbia.edu/SOURCES/.Models/.NMME/.CanSIPS-IC3/.CanCM4i-IC3/.HINDCAST/.MONTHLY/.prec/S/(0000%201%20" + start_time + "%20" + str(start_year) + "-2020)/VALUES/SOURCES/.Models/.NMME/.CanSIPS-IC3/.CanCM4i-IC3/.FORECAST/.MONTHLY/.prec/S/(0000%201%20" + start_time + "%202021-" + str(last_year) + ")/VALUES/appendstream/L/" + str(start_step) + "/" + str(last_step) + "/RANGE/%5BL%5D//keepgrids/average/c%3A/90//units//days/def/%3Ac/mul/M/1/10/RANGE/%5BM%5Daverage/Y/(" + str(lat_1) + ")/(" + str(lat_2) + ")/RANGEEDGES/X/(" + str(lon_1) + ")/(" + str(lon_2) + ")/RANGEEDGES/-999/setmissing_value/data.nc",
         'CCSM4': "https://iridl.ldeo.columbia.edu/SOURCES/.Models/.NMME/.COLA-RSMAS-CCSM4/.MONTHLY/.prec/S/(0000%201%20" + start_time + "%20" + str(start_year) + "-" + str(last_year) + ")/VALUES/L/" + str(start_step) + "/" + str(last_step) + "/RANGE/%5BL%5D//keepgrids/average/c%3A/90//units//days/def/%3Ac/mul/M/1/10/RANGE/%5BM%5Daverage/Y/(" + str(lat_1) + ")/(" + str(lat_2) + ")/RANGEEDGES/X/(" + str(lon_1) + ")/(" + str(lon_2) + ")/RANGEEDGES/-999/setmissing_value/data.nc",
         'GFDL': "https://iridl.ldeo.columbia.edu/SOURCES/.Models/.NMME/.GFDL-SPEAR/.HINDCAST/.MONTHLY/.prec/S/(0000%201%20" + start_time + "%20" + str(start_year) + "-2019)/VALUES/M/1/15/RANGE/%5BM%5Daverage/SOURCES/.Models/.NMME/.GFDL-SPEAR/.FORECAST/.MONTHLY/.prec/S/(0000%201%20" + start_time + "%202020-" + str(last_year) + ")/VALUES/M/1/30/RANGE/%5BM%5Daverage/appendstream/L/" + str(start_step) + "/" + str(last_step) + "/RANGE/%5BL%5D//keepgrids/average/c%3A/90//units//days/def/%3Ac/mul/Y/(" + str(lat_1) + ")/(" + str(lat_2) + ")/RANGEEDGES/X/(" + str(lon_1) + ")/(" + str(lon_2) + ")/RANGEEDGES/-999/setmissing_value/data.nc",
-        'NASA': "https://iridl.ldeo.columbia.edu/SOURCES/.Models/.NMME/.NASA-GEOSS2S/.HINDCAST/.MONTHLY/.prec/S/(0000%201%20" + start_time + "%20" + str(start_year) + "-2016)/VALUES/M/1/4/RANGE/%5BM%5Daverage/SOURCES/.Models/.NMME/.NASA-GEOSS2S/.FORECAST/.MONTHLY/.prec/S/(0000%201%20" + start_time + "%202017-" + str(last_year) + ")/VALUES/M/1/10/RANGE/%5BM%5Daverage/appendstream/L/" + str(start_step) + "/" + str(last_step) + "/RANGE/%5BL%5D//keepgrids/average/c%3A/90//units//days/def/%3Ac/mul/Y/(" + str(lat_1) + ")/(" + str(lat_2) + ")/RANGEEDGES/X/(" + str(lon_1) + ")/(" + str(lon_2) + ")/RANGEEDGES/-999/setmissing_value/data.nc"
+        'NASA': "https://iridl.ldeo.columbia.edu/SOURCES/.Models/.NMME/.NASA-GEOSS2S/.HINDCAST/.MONTHLY/.prec/S/(0000%201%20" + start_time + "%20" + str(start_year) + "-2016)/VALUES/M/1/4/RANGE/%5BM%5Daverage/SOURCES/.Models/.NMME/.NASA-GEOSS2S/.FORECAST/.MONTHLY/.prec/S/(0000%201%20" + start_time + "%202017-" + str(last_year) + ")/VALUES/M/1/10/RANGE/%5BM%5Daverage/appendstream/L/" + str(start_step) + "/" + str(last_step) + "/RANGE/%5BL%5D//keepgrids/average/c%3A/90//units//days/def/%3Ac/mul/Y/(" + str(lat_1) + ")/(" + str(lat_2) + ")/RANGEEDGES/X/(" + str(lon_1) + ")/(" + str(lon_2) + ")/RANGEEDGES/-999/setmissing_value/data.nc",
+        'ECMWF':"https://iridl.ldeo.columbia.edu/SOURCES/.EU/.Copernicus/.CDS/.C3S/.ECMWF/.SEAS51/.hindcast/.prcp/S/(0000%201%20"+ start_time +"%20"+ str(start_year) +"-2021)/VALUES/M/1/25/RANGE/[M]average/SOURCES/.EU/.Copernicus/.CDS/.C3S/.ECMWF/.SEAS51/.forecast/.prcp/S/(0000%201%20"+ start_time +"%202022-"+ str(last_year) +")/VALUES/M/1/51/RANGE/[M]average/appendstream/L/" + str(start_step) + "/" + str(last_step) +  "/RANGE/[L]//keepgrids/average/%28mm/day%29/unitconvert/c:/90//units//days/def/:c/mul/Y/("+ str(lat_1) + ")/(" + str(lat_2) +")/RANGEEDGES/X/("+ str(lon_1) +")/("+str(lon_2)+")/RANGEEDGES/-999/setmissing_value/data.nc"
     }
     
     if model not in dic:
@@ -377,7 +378,7 @@ def download_data_gcm(params):
     now = datetime.datetime.now()
     end_year = now.year - 1
 
-    start_time = (now).strftime("%b")
+    start_time  = (now).strftime("%b")
     if isinstance(models, str):
         models = [models]
 
@@ -537,7 +538,7 @@ def run_forecast(params, obs_f):
     os.makedirs(fore_path,exist_ok=True)
     os.makedirs(fore_path_input,exist_ok=True)
     now = datetime.datetime.now()
-    start_time=now.month
+    start_time = (now).month
     start_step = params['start_step']
     last_step = params['last_step']
     start_month = int(start_time + start_step - 0.5)
@@ -548,6 +549,7 @@ def run_forecast(params, obs_f):
         end_month -= 12
 
     months = [start_month, end_month]
+    print(months)
     obs = calculate_winter_precip(os.path.join(base_path, 'chirps', 'chirps_daily.nc'), months)
     
     obs = obs.rename({'year': 'S'})
@@ -606,7 +608,7 @@ def run_forecast(params, obs_f):
             'variable': ['total_precipitation'],
             'product_type': ['monthly_mean'],  # Cambiado a monthly_mean
             'year': [str(now.year)],  # Año actual
-            'month': [str(now.month).zfill(2)],  # Mes actual en formato de 2 dígitos
+            'month': [str(now.month-1).zfill(2)],  # Mes actual en formato de 2 dígitos
             'leadtime_month':leadtime_month,
             'data_format': 'netcdf',
             'area': area  # Coordenadas convertidas
@@ -706,13 +708,13 @@ def run_forecast(params, obs_f):
     for combinacion in combinaciones_filtradas:
         est_kwargs = {'search_override': combinacion, 'latitude_weighting': True}
         ytest_list, preds_list = [], []
-        cross_validator = xc.CrossValidator(model1_f, obs_f, window=window)
+        cross_validator = xc.CrossValidator(model1_f, obs_f, window=3)
         for xtrain, ytrain, xtest, ytest in cross_validator:
             reg = xc.CCA(**est_kwargs)
             reg.fit(xtrain, ytrain)
             preds = reg.predict(xtest)
-            preds_list.append(preds.isel(S=S_value))
-            ytest_list.append(ytest.isel(S=S_value))
+            preds_list.append(preds.isel(S=1))
+            ytest_list.append(ytest.isel(S=1))
 
             hindcasts_det = xr.concat(preds_list, 'S').chunk(dict(S=-1))
             ytest_concat = xr.concat(ytest_list, 'S').chunk(dict(S=-1))
@@ -853,74 +855,10 @@ def create_ensemble(params, paths, precip_monthly):
     start_step= params['start_step']
     directory_path = params['save_path']
     descarga_path = os.path.join(directory_path, 'descarga')
-    if 'ECMWF' in params['modelos']:
-        print('Descargando ECMWF')
-        years = [str(year) for year in range(1982, datetime.datetime.now().year)]
-        
-        if 'ECMWF' in params['modelos']:
-            if start_step == 1.5:
-                leadtime_month = ['1', '2', '3']
-                step_range = "1.5-3.5"
-            elif start_step == 4.5:
-                leadtime_month = ['4', '5', '6']
-                step_range = "4.5-6.5"
-            else:
-                leadtime_month = []
-                step_range = ""
-            
-            current_month_num = datetime.datetime.now().month
-            current_month_str = calendar.month_abbr[current_month_num]
-            
-            client = cdsapi.Client()
-            lat_min = convert_coordinates(params['lat_min'])
-            lat_max = convert_coordinates(params['lat_max'])
-            lon_min = convert_coordinates(params['lon_min'])
-            lon_max = convert_coordinates(params['lon_max'])
-            area = [lat_max, lon_min, lat_min, lon_max]
-
-            request = {
-                'originating_centre': 'ecmwf',
-                'system': '51',
-                'variable': ['total_precipitation'],
-                'product_type': ['monthly_mean'],
-                'year': years,
-                'month': [str(current_month_num).zfill(2)],
-                'leadtime_month': leadtime_month,
-                'data_format': 'netcdf',
-                'area': area  
-            }
-
-            file_name = f"ECMWF_{current_month_str}_{step_range}.nc"
-            full_path = os.path.join(descarga_path, file_name)
-            while True:
-                try:
-                    client.retrieve("seasonal-monthly-single-levels", request).download(full_path)
-                    print(f"El archivo ha sido descargado: {full_path}")
-                    break  
-                except ValueError as e:
-                    if "job is running" in str(e):
-                        print("El trabajo aún está en ejecución, esperando 180 segundos...")
-                        time.sleep(180)  
-                    else:
-                        raise
-
-            Total = xr.open_dataset(full_path).tprate
-            Total = Total.mean(dim='number')
-            Total = Total.rename({'latitude': 'Y', 'longitude': 'X', 'forecast_reference_time': 'S'})
-            Total.values = Total.values * 1000 * 86400 * 30
-            Total = Total.sum(dim='forecastMonth')
-            Total['X'] = xr.where(Total['X'] > 180, Total['X'] - 360, Total['X'])
-            Total = Total.rio.set_spatial_dims('X', 'Y', inplace=True)
-            Total = Total.rio.write_crs("EPSG:4326", inplace=True)
-            Total = Total.sortby(['X', 'Y'])
-            Total['S'] = Total['S'].dt.year.values
-            Total = Total.expand_dims(dim={'M': ['ECMWF']})
-            Total_regrid = xc.regrid(Total, precip_monthly.X, precip_monthly.Y)
-            gcm.append(Total_regrid)
-
     if paths:  # Si hay paths
         for file_path in paths:
             try:
+                print(file_path)
                 ds = xr.open_dataset(file_path, decode_times=False, engine='netcdf4').aprod
                 ds = ds.rename({'L': 'M'})
                 units = ds['S'].attrs['units']
@@ -930,6 +868,7 @@ def create_ensemble(params, paths, precip_monthly):
                 years = [date.year for date in date_plus]
                 ds_last = ds.assign_coords({'S': years}).copy()
                 ds_regrid = xc.regrid(ds_last, precip_monthly.X, precip_monthly.Y)
+                print(ds_regrid)
                 gcm.append(ds_regrid)
             except Exception as e:
                 print(f"Error al procesar archivo {file_path}: {e}")
@@ -944,6 +883,7 @@ def create_ensemble(params, paths, precip_monthly):
             return None
     
     return Ensamble
+
 def run_script(params, output_path):
     base_path = params.get('save_path', output_path)
     params['save_path'] = base_path
@@ -962,9 +902,9 @@ def run_script(params, output_path):
 
     print('Descargando datos de GCM')
     paths = download_data_gcm(params)
-
+    print(paths)
     now = datetime.datetime.now()
-    start_time = now.month
+    start_time = (now).month
     start_month = int(start_time + params['start_step'] - 0.5)
     end_month = int(start_time + params['last_step'] - 0.5)
 
@@ -974,6 +914,7 @@ def run_script(params, output_path):
         end_month -= 12
 
     months = [start_month, end_month]
+    print(months)
     precip_monthly = calculate_winter_precip(os.path.join(params['save_path'], 'chirps', 'chirps_daily.nc'), months)
     if precip_monthly is None:
         return "Error en el cálculo de precipitación"
